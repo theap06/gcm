@@ -186,14 +186,38 @@ class SlurmCliClient(SlurmClient):
             sdiag_output = json.loads(
                 subprocess.check_output(["sdiag", "--all", "--json"], text=True)
             )
+            stats = sdiag_output["statistics"]
 
-            return Sdiag(
-                server_thread_count=sdiag_output["statistics"]["server_thread_count"],
-                agent_queue_size=sdiag_output["statistics"]["agent_queue_size"],
-                agent_count=sdiag_output["statistics"]["agent_count"],
-                agent_thread_count=sdiag_output["statistics"]["agent_thread_count"],
-                dbd_agent_queue_size=sdiag_output["statistics"]["dbd_agent_queue_size"],
+            result = Sdiag(
+                server_thread_count=stats.get("server_thread_count"),
+                agent_queue_size=stats.get("agent_queue_size"),
+                agent_count=stats.get("agent_count"),
+                agent_thread_count=stats.get("agent_thread_count"),
+                dbd_agent_queue_size=stats.get("dbd_agent_queue_size"),
+                schedule_cycle_max=stats.get("schedule_cycle_max"),
+                schedule_cycle_mean=stats.get("schedule_cycle_mean"),
+                schedule_cycle_sum=stats.get("schedule_cycle_sum"),
+                schedule_cycle_total=stats.get("schedule_cycle_total"),
+                schedule_cycle_per_minute=stats.get("schedule_cycle_per_minute"),
+                schedule_queue_length=stats.get("schedule_queue_length"),
+                sdiag_jobs_submitted=stats.get("jobs_submitted"),
+                sdiag_jobs_started=stats.get("jobs_started"),
+                sdiag_jobs_completed=stats.get("jobs_completed"),
+                sdiag_jobs_canceled=stats.get("jobs_canceled"),
+                sdiag_jobs_failed=stats.get("jobs_failed"),
+                sdiag_jobs_pending=stats.get("jobs_pending"),
+                sdiag_jobs_running=stats.get("jobs_running"),
+                bf_backfilled_jobs=stats.get("bf_backfilled_jobs"),
+                bf_cycle_mean=stats.get("bf_cycle_mean"),
+                bf_cycle_sum=stats.get("bf_cycle_sum"),
+                bf_cycle_max=stats.get("bf_cycle_max"),
+                bf_queue_len=stats.get("bf_queue_len"),
             )
+
+            # Reset sdiag counters after collection
+            self._reset_sdiag_counters()
+
+            return result
 
         sdiag_output = subprocess.check_output(["sdiag", "--all"], text=True)
         metric_names = {
@@ -203,7 +227,7 @@ class SlurmCliClient(SlurmClient):
             "Agent thread count:": "agent_thread_count",
             "DBD Agent queue size:": "dbd_agent_queue_size",
         }
-        data = {
+        data: dict[str, Optional[int]] = {
             "server_thread_count": 0,
             "agent_queue_size": 0,
             "agent_count": 0,
@@ -215,7 +239,55 @@ class SlurmCliClient(SlurmClient):
             lines = re.search(rf".*{sdiag_name}.*", sdiag_output)
             assert lines is not None, f"Sdiag metric {sdiag_name} not found: {lines}"
             data[name] = int(lines.group().strip(f"{sdiag_name}"))
+
+        optional_metric_names = {
+            "Schedule cycle max:": "schedule_cycle_max",
+            "Schedule cycle mean:": "schedule_cycle_mean",
+            "Schedule cycle sum:": "schedule_cycle_sum",
+            "Schedule cycle total:": "schedule_cycle_total",
+            "Schedule cycle per minute:": "schedule_cycle_per_minute",
+            "Schedule queue length:": "schedule_queue_length",
+            "Jobs submitted:": "sdiag_jobs_submitted",
+            "Jobs started:": "sdiag_jobs_started",
+            "Jobs completed:": "sdiag_jobs_completed",
+            "Jobs canceled:": "sdiag_jobs_canceled",
+            "Jobs failed:": "sdiag_jobs_failed",
+            "Jobs pending:": "sdiag_jobs_pending",
+            "Jobs running:": "sdiag_jobs_running",
+            "Total backfilled jobs \\(since last slurm start\\):": "bf_backfilled_jobs",
+            "Backfill cycle mean:": "bf_cycle_mean",
+            "Backfill cycle sum:": "bf_cycle_sum",
+            "Backfill cycle max:": "bf_cycle_max",
+            "Backfill queue length:": "bf_queue_len",
+        }
+
+        for sdiag_name, name in optional_metric_names.items():
+            match = re.search(rf"{sdiag_name}\s*(\d+)", sdiag_output)
+            if match:
+                data[name] = int(match.group(1))
+            else:
+                data[name] = None
+
+        # Reset sdiag counters after collection
+        self._reset_sdiag_counters()
+
         return Sdiag(**data)
+
+    def _reset_sdiag_counters(self) -> None:
+        """Reset sdiag counters after collection.
+
+        This requires appropriate permissions (typically root or SlurmUser).
+        If the reset fails due to permission issues, a warning is logged.
+        """
+        try:
+            subprocess.run(
+                ["sdiag", "--reset"],
+                check=True,
+                capture_output=True,
+                text=True,
+            )
+        except subprocess.CalledProcessError as e:
+            logger.warning(f"Failed to reset sdiag counters: {e.stderr.strip()}")
 
     def sinfo_structured(self) -> Sinfo:
         fieldnames = [f.name for f in fields(SinfoRow)]
