@@ -5,6 +5,7 @@ from gcm.health_checks.checks.check_authentication import check_authentication
 from gcm.health_checks.checks.check_blockdev import check_blockdev
 from gcm.health_checks.checks.check_dcgmi import check_dcgmi
 from gcm.health_checks.checks.check_ethlink import check_ethlink
+from gcm.health_checks.checks.check_gpu_clock_policy import check_gpu_clock_policy
 from gcm.health_checks.checks.check_hca import check_hca
 from gcm.health_checks.checks.check_ibstat import check_ib
 from gcm.health_checks.checks.check_ipmitool import check_ipmitool
@@ -28,6 +29,7 @@ __all__ = [
     "check_telemetry",
     "check_dcgmi",
     "check_hca",
+    "check_gpu_clock_policy",
     "check_nvidia_smi",
     "check_nccl",
     "check_syslogs",
