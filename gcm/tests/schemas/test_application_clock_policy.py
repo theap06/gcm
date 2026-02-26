@@ -1,0 +1,64 @@
+from gcm.monitoring.device_telemetry_client import ApplicationClockInfo
+from gcm.schemas.gpu.application_clock_policy import (
+    ClockComplianceSeverity,
+    ClockPolicy,
+    evaluate_clock_policy,
+)
+
+
+def test_evaluate_clock_policy_ok() -> None:
+    policy = ClockPolicy(
+        expected_graphics_freq=1155,
+        expected_memory_freq=1593,
+        warn_delta_mhz=30,
+        critical_delta_mhz=75,
+    )
+
+    result = evaluate_clock_policy(ApplicationClockInfo(1155, 1593), policy)
+
+    assert result.compliant
+    assert result.severity == ClockComplianceSeverity.OK
+    assert result.graphics_delta_mhz == 0
+    assert result.memory_delta_mhz == 0
+
+
+def test_evaluate_clock_policy_warn() -> None:
+    policy = ClockPolicy(
+        expected_graphics_freq=1155,
+        expected_memory_freq=1593,
+        warn_delta_mhz=30,
+        critical_delta_mhz=75,
+    )
+
+    result = evaluate_clock_policy(ApplicationClockInfo(1200, 1593), policy)
+
+    assert not result.compliant
+    assert result.severity == ClockComplianceSeverity.WARN
+
+
+def test_evaluate_clock_policy_critical() -> None:
+    policy = ClockPolicy(
+        expected_graphics_freq=1155,
+        expected_memory_freq=1593,
+        warn_delta_mhz=30,
+        critical_delta_mhz=75,
+    )
+
+    result = evaluate_clock_policy(ApplicationClockInfo(1250, 1593), policy)
+
+    assert not result.compliant
+    assert result.severity == ClockComplianceSeverity.CRITICAL
+
+
+def test_evaluate_clock_policy_invalid_thresholds() -> None:
+    try:
+        ClockPolicy(
+            expected_graphics_freq=1155,
+            expected_memory_freq=1593,
+            warn_delta_mhz=50,
+            critical_delta_mhz=40,
+        )
+    except ValueError:
+        return
+
+    raise AssertionError("Expected ValueError for invalid threshold ordering")
