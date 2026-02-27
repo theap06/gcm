@@ -50,7 +50,7 @@ def evaluate_clock_policy(
 
     if max_delta_mhz > policy.critical_delta_mhz:
         severity = ClockComplianceSeverity.CRITICAL
-    elif max_delta_mhz > policy.warn_delta_mhz:
+    elif max_delta_mhz >= policy.warn_delta_mhz:
         severity = ClockComplianceSeverity.WARN
     else:
         severity = ClockComplianceSeverity.OK
