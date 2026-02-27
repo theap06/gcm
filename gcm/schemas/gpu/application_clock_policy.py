@@ -6,10 +6,6 @@ from enum import Enum
 from gcm.schemas.gpu.application_clock import ApplicationClockInfo
 
 
-class ClockComplianceSeverity(Enum):
-    OK = "ok"
-    WARN = "warn"
-    CRITICAL = "critical"
 
 
 @dataclass(frozen=True)
