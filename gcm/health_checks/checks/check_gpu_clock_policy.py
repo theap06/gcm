@@ -24,6 +24,9 @@ from gcm.monitoring.device_telemetry_client import (
     DeviceTelemetryException,
 )
 from gcm.monitoring.device_telemetry_nvml import NVMLDeviceTelemetryClient
+from gcm.monitoring.features.gen.generated_features_healthchecksfeatures import (
+    FeatureValueHealthChecksFeatures,
+)
 from gcm.monitoring.slurm.derived_cluster import get_derived_cluster
 from gcm.monitoring.utils.monitor import init_logger
 from gcm.schemas.gpu.application_clock_policy import (
@@ -182,6 +185,16 @@ def check_gpu_clock_policy(
                 verbose_out,
             )
         )
+
+        ff = FeatureValueHealthChecksFeatures()
+        if ff.get_healthchecksfeatures_disable_nvidia_smi_clock_policy():
+            exit_code = ExitCode.OK
+            msg = (
+                f"{HealthCheckName.NVIDIA_SMI_CLOCK_POLICY.value} "
+                "is disabled by killswitch."
+            )
+            logger.info(msg)
+            sys.exit(exit_code.value)
 
         try:
             device_telemetry = obj.get_device_telemetry()

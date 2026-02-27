@@ -15,6 +15,7 @@ Health checks are organized into the following categories:
 | [check-blockdev](check-blockdev.md) | Storage | Monitors NVMe device health via SMART data |
 | [check-dcgmi](check-dcgmi) | GPU | NVIDIA DCGM diagnostics and NVLink validation |
 | [check-ethlink](check-ethlink.md) | Network | Validates Ethernet interface configuration and state |
+| [check-gpu-clock-policy](check-gpu-clock-policy.md) | GPU | Validates GPU application clock policy compliance and drift |
 | [check-hca](check-hca.md) | Network | Verifies InfiniBand HCA device count |
 | [check-ib](check-ib) | Network | InfiniBand link health and performance validation |
 | [check-ipmitool](check-ipmitool.md) | Hardware | System Event Log (SEL) analysis for hardware errors |
