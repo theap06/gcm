@@ -11,6 +11,8 @@ class ClockComplianceSeverity(Enum):
     WARN = "WARN"
     CRITICAL = "CRITICAL"
 
+
+
 @dataclass(frozen=True)
 class ClockPolicy:
     expected_graphics_freq: int
@@ -61,4 +63,3 @@ def evaluate_clock_policy(
         memory_delta_mhz=memory_delta_mhz,
         severity=severity,
     )
-        memory_delta_mhz=memory_delta_mhz,
