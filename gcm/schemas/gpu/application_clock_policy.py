@@ -45,7 +45,7 @@ def evaluate_clock_policy(
     max_delta_mhz = max(graphics_delta_mhz, memory_delta_mhz)
 
     if max_delta_mhz >= policy.critical_delta_mhz:
-        severity = ClockComplianceSeverity.CRITICAL
+        severity = ExitCode.CRITICAL
     elif max_delta_mhz >= policy.warn_delta_mhz:
         severity = ClockComplianceSeverity.WARN
     else:
