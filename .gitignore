@@ -29,6 +29,7 @@ out/
 debian/gcm/
 debian/.debhelper/
 .env
+templates/gpu_clock_policy_compliance/
 
 # Source: https://github.com/github/gitignore/blob/main/Python.gitignore
 # Byte-compiled / optimized / DLL files

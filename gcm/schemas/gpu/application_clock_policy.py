@@ -6,7 +6,10 @@ from enum import Enum
 from gcm.schemas.gpu.application_clock import ApplicationClockInfo
 
 
-
+class ClockComplianceSeverity(Enum):
+    OK = "OK"
+    WARN = "WARN"
+    CRITICAL = "CRITICAL"
 
 @dataclass(frozen=True)
 class ClockPolicy:
@@ -45,7 +48,7 @@ def evaluate_clock_policy(
     max_delta_mhz = max(graphics_delta_mhz, memory_delta_mhz)
 
     if max_delta_mhz >= policy.critical_delta_mhz:
-        severity = ExitCode.CRITICAL
+        severity = ClockComplianceSeverity.CRITICAL
     elif max_delta_mhz >= policy.warn_delta_mhz:
         severity = ClockComplianceSeverity.WARN
     else:
@@ -58,3 +61,4 @@ def evaluate_clock_policy(
         memory_delta_mhz=memory_delta_mhz,
         severity=severity,
     )
+        memory_delta_mhz=memory_delta_mhz,
