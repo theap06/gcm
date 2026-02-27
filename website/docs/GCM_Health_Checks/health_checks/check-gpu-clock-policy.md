@@ -12,7 +12,7 @@ For each GPU, the check compares observed graphics and memory application clocks
 | `--expected-graphics-freq` | Integer | **Required** | Expected graphics application clock (MHz) |
 | `--expected-memory-freq` | Integer | **Required** | Expected memory application clock (MHz) |
 | `--warn-delta-mhz` | Integer | 30 | Warn when absolute drift meets or exceeds this threshold |
-| `--critical-delta-mhz` | Integer | 75 | Critical when absolute drift exceeds this threshold |
+| `--critical-delta-mhz` | Integer | 75 | Critical when absolute drift meets or exceeds this threshold |
 | `--timeout` | Integer | 300 | Command execution timeout in seconds |
 | `--sink` | String | do_nothing | Telemetry sink destination |
 | `--sink-opts` | Multiple | - | Sink-specific configuration |
