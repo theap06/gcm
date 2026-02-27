@@ -44,7 +44,7 @@ def evaluate_clock_policy(
     memory_delta_mhz = abs(observed.memory_freq - policy.expected_memory_freq)
     max_delta_mhz = max(graphics_delta_mhz, memory_delta_mhz)
 
-    if max_delta_mhz > policy.critical_delta_mhz:
+    if max_delta_mhz >= policy.critical_delta_mhz:
         severity = ClockComplianceSeverity.CRITICAL
     elif max_delta_mhz >= policy.warn_delta_mhz:
         severity = ClockComplianceSeverity.WARN
