@@ -28,6 +28,7 @@ class HealthChecksFeatures:
     disable_package_version: bool
     disable_nccl_tests: bool
     disable_nvidia_smi: bool
+    disable_nvidia_smi_clock_policy: bool
     disable_nvidia_smi_gpu_num: bool
     disable_nvidia_smi_clock_freq: bool
     disable_nvidia_smi_running_procs: bool
