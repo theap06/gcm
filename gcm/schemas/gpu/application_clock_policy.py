@@ -12,7 +12,6 @@ class ClockComplianceSeverity(Enum):
     CRITICAL = "CRITICAL"
 
 
-
 @dataclass(frozen=True)
 class ClockPolicy:
     expected_graphics_freq: int
