@@ -31,7 +31,6 @@ from gcm.monitoring.slurm.derived_cluster import get_derived_cluster
 from gcm.monitoring.utils.monitor import init_logger
 from gcm.schemas.gpu.application_clock_policy import (
     ClockComplianceResult,
-    ClockComplianceSeverity,
     ClockPolicy,
     evaluate_clock_policy,
 )
@@ -52,14 +51,6 @@ class GpuClockPolicyCliImpl:
 
     def get_device_telemetry(self) -> DeviceTelemetryClient:
         return NVMLDeviceTelemetryClient()
-
-
-def severity_to_exitcode(severity: ClockComplianceSeverity) -> ExitCode:
-    if severity == ClockComplianceSeverity.CRITICAL:
-        return ExitCode.CRITICAL
-    if severity == ClockComplianceSeverity.WARN:
-        return ExitCode.WARN
-    return ExitCode.OK
 
 
 @click.command()
@@ -224,13 +215,13 @@ def check_gpu_clock_policy(
 
             result = evaluate_clock_policy(observed, policy)
             results.append(result)
-            device_exit_code = severity_to_exitcode(result.severity)
+            device_exit_code = result.severity
             if device_exit_code > exit_code:
                 exit_code = device_exit_code
 
             msg += (
                 "clock_policy check: "
-                f"GPU {device}, severity={result.severity.value}, "
+                f"GPU {device}, severity={result.severity.name}, "
                 f"expected=(graphics:{policy.expected_graphics_freq}, memory:{policy.expected_memory_freq}), "
                 f"observed=(graphics:{result.observed.graphics_freq}, memory:{result.observed.memory_freq}), "
                 f"delta_mhz=(graphics:{result.graphics_delta_mhz}, memory:{result.memory_delta_mhz})\n"

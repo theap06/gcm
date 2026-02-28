@@ -1,15 +1,9 @@
 # Copyright (c) Meta Platforms, Inc. and affiliates.
 # All rights reserved.
 from dataclasses import dataclass
-from enum import Enum
 
+from gcm.health_checks.types import ExitCode
 from gcm.schemas.gpu.application_clock import ApplicationClockInfo
-
-
-class ClockComplianceSeverity(Enum):
-    OK = "OK"
-    WARN = "WARN"
-    CRITICAL = "CRITICAL"
 
 
 @dataclass(frozen=True)
@@ -34,11 +28,11 @@ class ClockComplianceResult:
     policy: ClockPolicy
     graphics_delta_mhz: int
     memory_delta_mhz: int
-    severity: ClockComplianceSeverity
+    severity: ExitCode
 
     @property
     def compliant(self) -> bool:
-        return self.severity == ClockComplianceSeverity.OK
+        return self.severity == ExitCode.OK
 
 
 def evaluate_clock_policy(
@@ -49,11 +43,11 @@ def evaluate_clock_policy(
     max_delta_mhz = max(graphics_delta_mhz, memory_delta_mhz)
 
     if max_delta_mhz >= policy.critical_delta_mhz:
-        severity = ClockComplianceSeverity.CRITICAL
+        severity = ExitCode.CRITICAL
     elif max_delta_mhz >= policy.warn_delta_mhz:
-        severity = ClockComplianceSeverity.WARN
+        severity = ExitCode.WARN
     else:
-        severity = ClockComplianceSeverity.OK
+        severity = ExitCode.OK
 
     return ClockComplianceResult(
         observed=observed,

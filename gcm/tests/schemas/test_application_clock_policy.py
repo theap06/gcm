@@ -1,9 +1,6 @@
+from gcm.health_checks.types import ExitCode
 from gcm.monitoring.device_telemetry_client import ApplicationClockInfo
-from gcm.schemas.gpu.application_clock_policy import (
-    ClockComplianceSeverity,
-    ClockPolicy,
-    evaluate_clock_policy,
-)
+from gcm.schemas.gpu.application_clock_policy import ClockPolicy, evaluate_clock_policy
 
 
 def test_evaluate_clock_policy_ok() -> None:
@@ -17,7 +14,7 @@ def test_evaluate_clock_policy_ok() -> None:
     result = evaluate_clock_policy(ApplicationClockInfo(1155, 1593), policy)
 
     assert result.compliant
-    assert result.severity == ClockComplianceSeverity.OK
+    assert result.severity == ExitCode.OK
     assert result.graphics_delta_mhz == 0
     assert result.memory_delta_mhz == 0
 
@@ -33,7 +30,7 @@ def test_evaluate_clock_policy_warn() -> None:
     result = evaluate_clock_policy(ApplicationClockInfo(1200, 1593), policy)
 
     assert not result.compliant
-    assert result.severity == ClockComplianceSeverity.WARN
+    assert result.severity == ExitCode.WARN
 
 
 def test_evaluate_clock_policy_critical() -> None:
@@ -47,7 +44,7 @@ def test_evaluate_clock_policy_critical() -> None:
     result = evaluate_clock_policy(ApplicationClockInfo(1250, 1593), policy)
 
     assert not result.compliant
-    assert result.severity == ClockComplianceSeverity.CRITICAL
+    assert result.severity == ExitCode.CRITICAL
 
 
 def test_evaluate_clock_policy_invalid_thresholds() -> None:
