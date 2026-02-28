@@ -66,7 +66,6 @@ $ health_checks --features-config=$features_path --config=$config_path check-dcg
 - [check-dcgmi](#check-dcgmi)
 - [check-process](#check-process)
 - [check-nvidia-smi](#check-nvidia-smi)
-- [check-gpu-clock-policy](#check-gpu-clock-policy)
 - [check-syslogs](#check-syslogs)
 - [cuda-memtest](#cuda-memtest)
 - [check-nccl](#check-nccl)
@@ -137,12 +136,13 @@ The supported checks are:
 1. Check GPU number
 2. Check for running processes on the GPUs
 3. Check GPU clock frequencies
-4. Check GPU temperature
-5. Check GPU memory usage
-6. Check GPU retired pages
-7. Check ECC volatile errors
-8. Check for remapped rows
-9. Check VBIOS mismatch
+4. Check GPU clock policy compliance and drift
+5. Check GPU temperature
+6. Check GPU memory usage
+7. Check GPU retired pages
+8. Check ECC volatile errors
+9. Check for remapped rows
+10. Check VBIOS mismatch
 
 File: `gcm/health_checks/checks/check_nvidia_smi.py`
 
@@ -151,29 +151,11 @@ Examples of execution:
 $ health_checks check-nvidia-smi --help
 $ health_checks check-nvidia-smi fair_cluster prolog -c gpu_num --sink=do_nothing
 $ health_checks check-nvidia-smi fair_cluster prolog -c gpu_num -c running_procs -c clock_freq -c gpu_temperature --gpu_temperature_threshold=84 --sink=do_nothing
+$ health_checks check-nvidia-smi fair_cluster prolog -c clock_policy --expected-graphics-freq=1155 --expected-memory-freq=1593 --warn-delta-mhz=30 --critical-delta-mhz=75 --sink=do_nothing # Check GPU clock policy drift severity
 $ health_checks check-nvidia-smi fair_cluster prolog -c gpu_mem_usage --gpu_mem_usage_threshold=850 --sink=do_nothing # giving the critical threshold in MB for GPU mem utilization
 $ health_checks check-nvidia-smi fair_cluster prolog -c gpu_retired_pages --gpu_retired_pages_threshold=10 --sink=do_nothing # Check if there are pending retired pages or retired pages are above the threshold
 $ health_checks check-nvidia-smi fair_cluster prolog -c ecc_uncorrected_volatile_total -c ecc_corrected_volatile_total --ecc_uncorrected_volatile_threshold=0 --ecc_corrected_volatile_threshold=50000000 --sink=do_nothing # Check for ECC errors
 $ health_checks check-nvidia-smi fair_cluster prolog -c row_remap --sink=do_nothing # Check that there are no pending or failed row remaps
-```
-
-# check-gpu-clock-policy <div id='check-gpu-clock-policy'/>
-
-Validate GPU application clock compliance against a policy and detect drift.
-
-The command compares observed application clocks from NVML with expected values and
-returns:
-
-1. `OK` if all GPUs are within policy thresholds
-2. `WARN` if at least one GPU exceeds the warn threshold
-3. `CRITICAL` if at least one GPU exceeds the critical threshold
-
-File: `gcm/health_checks/checks/check_gpu_clock_policy.py`
-
-Examples of execution:
-```shell
-$ health_checks check-gpu-clock-policy --help
-$ health_checks check-gpu-clock-policy fair_cluster prolog --expected-graphics-freq=1155 --expected-memory-freq=1593 --warn-delta-mhz=30 --critical-delta-mhz=75 --sink=do_nothing
 ```
 
 # check-syslogs <div id='check-syslogs'/>

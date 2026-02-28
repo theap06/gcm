@@ -6,10 +6,7 @@ from typing import List
 
 from click.testing import CliRunner
 
-from gcm.health_checks.checks.check_gpu_clock_policy import (
-    check_gpu_clock_policy,
-    GpuClockPolicyCli,
-)
+from gcm.health_checks.checks.check_nvidia_smi import check_nvidia_smi, NvidiaSmiCli
 from gcm.health_checks.types import ExitCode
 from gcm.monitoring.device_telemetry_client import ApplicationClockInfo, GPUDevice
 from gcm.tests.fakes import FakeGPUDevice
@@ -35,7 +32,7 @@ class FakeDeviceTelemetryClient:
 
 
 @dataclass
-class FakeGpuClockPolicyCliObject:
+class FakeNvidiaSmiCliObject:
     cluster: str
     type: str
     log_level: str
@@ -51,7 +48,7 @@ def test_check_gpu_clock_policy_command_ok(
 ) -> None:
     runner = CliRunner(mix_stderr=False)
 
-    fake_obj: GpuClockPolicyCli = FakeGpuClockPolicyCliObject(
+    fake_obj: NvidiaSmiCli = FakeNvidiaSmiCliObject(
         "cluster",
         "type",
         "log_level",
@@ -60,9 +57,9 @@ def test_check_gpu_clock_policy_command_ok(
     )
 
     result = runner.invoke(
-        check_gpu_clock_policy,
+        check_nvidia_smi,
         (
-            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing "
+            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing -c clock_policy "
             "--expected-graphics-freq 1155 "
             "--expected-memory-freq 1593 "
             "--warn-delta-mhz 30 "
@@ -79,7 +76,7 @@ def test_check_gpu_clock_policy_command_warn(
 ) -> None:
     runner = CliRunner(mix_stderr=False)
 
-    fake_obj: GpuClockPolicyCli = FakeGpuClockPolicyCliObject(
+    fake_obj: NvidiaSmiCli = FakeNvidiaSmiCliObject(
         "cluster",
         "type",
         "log_level",
@@ -88,9 +85,9 @@ def test_check_gpu_clock_policy_command_warn(
     )
 
     result = runner.invoke(
-        check_gpu_clock_policy,
+        check_nvidia_smi,
         (
-            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing "
+            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing -c clock_policy "
             "--expected-graphics-freq 1155 "
             "--expected-memory-freq 1593 "
             "--warn-delta-mhz 30 "
@@ -107,7 +104,7 @@ def test_check_gpu_clock_policy_command_critical(
 ) -> None:
     runner = CliRunner(mix_stderr=False)
 
-    fake_obj: GpuClockPolicyCli = FakeGpuClockPolicyCliObject(
+    fake_obj: NvidiaSmiCli = FakeNvidiaSmiCliObject(
         "cluster",
         "type",
         "log_level",
@@ -116,9 +113,9 @@ def test_check_gpu_clock_policy_command_critical(
     )
 
     result = runner.invoke(
-        check_gpu_clock_policy,
+        check_nvidia_smi,
         (
-            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing "
+            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing -c clock_policy "
             "--expected-graphics-freq 1155 "
             "--expected-memory-freq 1593 "
             "--warn-delta-mhz 30 "
@@ -135,7 +132,7 @@ def test_check_gpu_clock_policy_uses_worst_case_across_gpus(
 ) -> None:
     runner = CliRunner(mix_stderr=False)
 
-    fake_obj: GpuClockPolicyCli = FakeGpuClockPolicyCliObject(
+    fake_obj: NvidiaSmiCli = FakeNvidiaSmiCliObject(
         "cluster",
         "type",
         "log_level",
@@ -148,9 +145,9 @@ def test_check_gpu_clock_policy_uses_worst_case_across_gpus(
     )
 
     result = runner.invoke(
-        check_gpu_clock_policy,
+        check_nvidia_smi,
         (
-            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing "
+            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing -c clock_policy "
             "--expected-graphics-freq 1155 "
             "--expected-memory-freq 1593 "
             "--warn-delta-mhz 30 "
@@ -167,7 +164,7 @@ def test_check_gpu_clock_policy_zero_gpu_warn(
 ) -> None:
     runner = CliRunner(mix_stderr=False)
 
-    fake_obj: GpuClockPolicyCli = FakeGpuClockPolicyCliObject(
+    fake_obj: NvidiaSmiCli = FakeNvidiaSmiCliObject(
         "cluster",
         "type",
         "log_level",
@@ -176,9 +173,9 @@ def test_check_gpu_clock_policy_zero_gpu_warn(
     )
 
     result = runner.invoke(
-        check_gpu_clock_policy,
+        check_nvidia_smi,
         (
-            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing "
+            f"fair_cluster nagios --log-folder={tmp_path} --sink=do_nothing -c clock_policy "
             "--expected-graphics-freq 1155 "
             "--expected-memory-freq 1593 "
             "--warn-delta-mhz 30 "

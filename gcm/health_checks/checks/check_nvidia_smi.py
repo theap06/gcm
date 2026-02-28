@@ -6,17 +6,23 @@ import socket
 import sys
 import time
 from contextlib import ExitStack
-from dataclasses import dataclass
+from dataclasses import dataclass, fields, is_dataclass
+
 from typing import (
     Any,
     Callable,
+    cast,
     Collection,
+    Hashable,
     Iterable,
     List,
     Literal,
+    Mapping,
     Optional,
     Protocol,
     Tuple,
+    Type,
+    TypeVar,
 )
 
 import click
@@ -45,9 +51,19 @@ from gcm.monitoring.features.gen.generated_features_healthchecksfeatures import 
 )
 from gcm.monitoring.slurm.derived_cluster import get_derived_cluster
 from gcm.monitoring.utils.monitor import init_logger
+from gcm.schemas.gpu.application_clock_policy import ClockPolicy, evaluate_clock_policy
 from gcm.schemas.gpu.process import ProcessInfo
 from gcm.schemas.health_check.health_check_name import HealthCheckName
+
+from pydantic import BaseModel
+
 from typeguard import typechecked
+
+_TDataclass = TypeVar("_TDataclass")
+BaseType = int | float | str | bool
+NonFlattened = object
+FlattenedOrBaseType = dict[str, BaseType] | BaseType
+Flattened = dict[str, BaseType]
 
 
 class NvidiaSmiCli(CheckEnv, Protocol):
@@ -293,6 +309,76 @@ def check_app_clock_freq(
 
     if exit_code == ExitCode.OK:
         msg = f"clock_freq check: exit_code: {ExitCode.OK}, Application frequencies are as expected.\n"
+    return exit_code, msg
+
+
+def check_clock_policy(
+    device_telemetry: DeviceTelemetryClient,
+    expected_graphics_freq: int,
+    expected_memory_freq: int,
+    warn_delta_mhz: int,
+    critical_delta_mhz: int,
+    logger: logging.Logger,
+) -> Tuple[ExitCode, str]:
+    """Validate per-GPU application clocks against a target policy."""
+    ff = FeatureValueHealthChecksFeatures()
+    if ff.get_healthchecksfeatures_disable_nvidia_smi_clock_policy():
+        msg = f"{HealthCheckName.NVIDIA_SMI_CLOCK_POLICY.value} is disabled by killswitch."
+        logger.info(msg)
+        return ExitCode.OK, msg
+
+    policy = ClockPolicy(
+        expected_graphics_freq=expected_graphics_freq,
+        expected_memory_freq=expected_memory_freq,
+        warn_delta_mhz=warn_delta_mhz,
+        critical_delta_mhz=critical_delta_mhz,
+    )
+
+    exit_code = ExitCode.UNKNOWN
+    msg = ""
+
+    try:
+        device_count = device_telemetry.get_device_count()
+    except DeviceTelemetryException as e:
+        return handle_device_telemetry_exception(e)
+
+    if device_count == 0:
+        return ExitCode.WARN, "clock_policy check: No GPUs were detected on this host."
+
+    has_observation = False
+    for device in range(device_count):
+        try:
+            handle = device_telemetry.get_device_by_index(device)
+            observed = handle.get_clock_freq()
+        except DeviceTelemetryException as e:
+            error_code, error_msg = handle_device_telemetry_exception(e)
+            if error_code > exit_code:
+                exit_code = error_code
+            msg += f"clock_policy check: GPU {device}: {error_msg}"
+            continue
+
+        has_observation = True
+        result = evaluate_clock_policy(observed, policy)
+        if result.severity > exit_code:
+            exit_code = result.severity
+
+        msg += (
+            "clock_policy check: "
+            f"GPU {device}, severity={result.severity.name}, "
+            f"expected=(graphics:{policy.expected_graphics_freq}, memory:{policy.expected_memory_freq}), "
+            f"observed=(graphics:{result.observed.graphics_freq}, memory:{result.observed.memory_freq}), "
+            f"delta_mhz=(graphics:{result.graphics_delta_mhz}, memory:{result.memory_delta_mhz})\n"
+        )
+
+    if not has_observation and exit_code == ExitCode.UNKNOWN:
+        return (
+            ExitCode.WARN,
+            "clock_policy check: No GPU clock observations were collected.",
+        )
+
+    if exit_code == ExitCode.UNKNOWN:
+        exit_code = ExitCode.OK
+
     return exit_code, msg
 
 
@@ -693,6 +779,7 @@ class TemperatureRequiredOption(click.Option):
             "running_procs_and_kill",
             "clock_freq",
             "gpu_temperature",
+            "clock_policy",
             "gpu_mem_usage",
             "gpu_retired_pages",
             "ecc_uncorrected_volatile_total",
@@ -719,6 +806,34 @@ class TemperatureRequiredOption(click.Option):
     type=click.INT,
     default=1593,
     help="Select what the GPU memory application frequency should be (MHz).",
+)
+@click.option(
+    "--expected-graphics-freq",
+    type=click.IntRange(min=0),
+    default=1155,
+    show_default=True,
+    help="Expected GPU graphics application clock frequency (MHz).",
+)
+@click.option(
+    "--expected-memory-freq",
+    type=click.IntRange(min=0),
+    default=1593,
+    show_default=True,
+    help="Expected GPU memory application clock frequency (MHz).",
+)
+@click.option(
+    "--warn-delta-mhz",
+    type=click.IntRange(min=0),
+    default=30,
+    show_default=True,
+    help="Warn if absolute drift from policy exceeds this many MHz.",
+)
+@click.option(
+    "--critical-delta-mhz",
+    type=click.IntRange(min=0),
+    default=75,
+    show_default=True,
+    help="Critical if absolute drift from policy exceeds this many MHz.",
 )
 @click.option(
     "--gpu_temperature_threshold",
@@ -791,6 +906,10 @@ def check_nvidia_smi(
     gpu_num: int,
     gpu_app_freq: int,
     gpu_app_mem_freq: int,
+    expected_graphics_freq: int,
+    expected_memory_freq: int,
+    warn_delta_mhz: int,
+    critical_delta_mhz: int,
     gpu_temperature_threshold: Optional[int],
     gpu_mem_usage_threshold: int,
     gpu_retired_pages_threshold: int,
@@ -828,6 +947,12 @@ def check_nvidia_smi(
 
     if obj is None:
         obj = NvidiaSmiCliImpl(cluster, type, log_level, log_folder)
+
+    if "clock_policy" in check and critical_delta_mhz < warn_delta_mhz:
+        raise click.BadParameter(
+            "critical-delta-mhz must be greater than or equal to warn-delta-mhz",
+            param_hint="--critical-delta-mhz",
+        )
 
     overall_exit_code = ExitCode.UNKNOWN
     overall_msg = ""
@@ -875,6 +1000,18 @@ def check_nvidia_smi(
             HealthCheckName.NVIDIA_SMI_CLOCK_FREQ,
             lambda: check_app_clock_freq(
                 device_telemetry, gpu_app_freq, gpu_app_mem_freq, logger
+            ),
+        ),
+        (
+            "clock_policy",
+            HealthCheckName.NVIDIA_SMI_CLOCK_POLICY,
+            lambda: check_clock_policy(
+                device_telemetry,
+                expected_graphics_freq,
+                expected_memory_freq,
+                warn_delta_mhz,
+                critical_delta_mhz,
+                logger,
             ),
         ),
         (
@@ -988,3 +1125,174 @@ def check_nvidia_smi(
 
         logger.info(f"Overall exit code {overall_exit_code}\n{overall_msg}")
         sys.exit(overall_exit_code.value)
+
+
+def instantiate_dataclass(
+    cls: Type[_TDataclass], data: Mapping[Hashable, Any], logger: logging.Logger
+) -> _TDataclass:
+    if not is_dataclass(cls):
+        raise TypeError(f"{type(cls).__name__} is not a dataclass.")
+    parsed_data = {}
+    for field in fields(cls):
+        field_name = field.metadata.get("field_name", field.name)
+        class_name = field.name
+        if field_name in data:
+            value = data[field_name]
+            parser = field.metadata.get("parser", lambda value: value)
+            parsed_data[class_name] = parser(value)
+        else:
+            logger.warning(f"Missing {field_name=} when instantiating {cls.__name__=}")
+            parsed_data[class_name] = None
+    return cast(_TDataclass, cls(**parsed_data))
+
+
+def asdict_recursive(obj: NonFlattened, key: str = "") -> FlattenedOrBaseType:
+    # somewhat inspired by _asdict_inner https://github.com/python/cpython/blob/3.13/Lib/dataclasses.py#L1362
+    results = {}
+    if is_dataclass(obj):
+        if hasattr(obj, "name") and (name := getattr(obj, "name")):
+            key += "." + name
+        for field in fields(obj):
+            if field.name == "name":
+                continue
+            value = getattr(obj, field.name)
+            if value is None:
+                continue
+            flat_result = asdict_recursive(value, key)
+            if isinstance(flat_result, dict):
+                results.update(flat_result)
+            else:
+                results[key] = flat_result
+    elif isinstance(obj, BaseModel):
+        dumped_value = obj.model_dump(exclude={"name"})
+        if hasattr(obj, "name") and (name := getattr(obj, "name")):
+            key += "." + name
+        flat_result = asdict_recursive(dumped_value, key)
+        if isinstance(flat_result, dict):
+            results.update(flat_result)
+        else:
+            results[key] = flat_result
+    elif isinstance(obj, dict):
+        if "name" in obj:
+            key += "." + str(obj["name"])
+            del obj["name"]
+        for k, value in obj.items():
+            if value is None:
+                continue
+            new_key = f"{key}.{k}" if key else str(k)
+            flat_result = asdict_recursive(value, new_key)
+            if isinstance(flat_result, dict):
+                results.update(flat_result)
+            else:
+                results[new_key] = flat_result
+    elif isinstance(obj, list) or isinstance(obj, tuple):
+        for i, value in enumerate(obj):
+            if value is None:
+                continue
+            if hasattr(value, "name") or (isinstance(value, dict) and "name" in value):
+                new_key = key
+            else:
+                new_key = key + f".{i}"
+            flat_result = asdict_recursive(value, new_key)
+            if isinstance(flat_result, dict):
+                results.update(flat_result)
+            else:
+                results[new_key] = flat_result
+    elif isinstance(obj, (str, int, float, bool)):
+        return obj
+    else:
+        raise TypeError(f"{type(obj)} is not supported for asdict_recursive.")
+    return results
+
+
+def flatten_dict_factory(pairs: list[tuple[str, object | BaseModel]]) -> Flattened:
+    """
+    Custom dict factory to be passed to dataclasses's asdict https://docs.python.org/3/library/dataclasses.html#dataclasses.asdict
+
+    Things that are special about this dict_factory:
+        1. It flattens a dictionary with . separated naming at the top level.
+            this:
+            {
+                obj1: {
+                    a: 1,
+                    b: 2,
+                }
+            }
+            becomes:
+            {"obj1.a" = 1, "obj1.b": 2}
+
+        2. It flattens lists with . separated list indexes (unless the list object matches rule 3)
+            this:
+            {
+                obj1: ['a', 'b']
+            }
+            becomes:
+            {"obj1.0" = 'a', "obj1.1": 'b'}
+
+        3. It flattens {pydantic's Base Models, Dict, and Dataclasses} taking `name` field (if present) as one of the `.` separated keys for the flattened dictionary, if name is available list objects won't have the index:
+            this:
+            class Test(BaseModel):
+                name: str
+                obj: int
+            {
+                obj1: Test(name="TestModelName", test_obj=123)
+            }
+            becomes:
+            {"obj1.TestModelName.test_obj" = 123}
+    """
+    results = {}
+    for key, value in pairs:
+        if value is None:
+            continue
+        flat_result = asdict_recursive(value, key)
+        if isinstance(flat_result, dict):
+            results.update(flat_result)
+        else:
+            results[key] = flat_result
+    return results
+
+
+def remove_none_dict_factory(
+    pairs: list[tuple[str, object | BaseModel]],
+) -> dict[str, object]:
+    return {key: value for key, value in pairs if value is not None}
+
+
+@typechecked
+def max_fields(
+    cls: Type[_TDataclass],
+) -> Callable[[_TDataclass, _TDataclass], _TDataclass]:
+    """Construct an operator for a dataclass which is defined by
+        max_fields(cls)(a, b).f := max'(a.f, b.f)
+    for all dataclasses `cls` and instances `a` and `b`, where max' is an extension of
+    `max` defined by
+        max'(x, None) := x
+        max'(None, y) := y
+        max'(x, y)    := max(x, y)
+    """
+    if not is_dataclass(cls):
+        raise TypeError(f"{type(cls).__name__} is not a dataclass.")
+
+    def op(left: _TDataclass, right: _TDataclass) -> _TDataclass:
+        if not isinstance(left, cls):
+            raise TypeError(
+                f"Expected '{cls.__name__}' but got {type(left).__name__} for left argument."
+            )
+        if not isinstance(right, cls):
+            raise TypeError(
+                f"Expected '{cls.__name__}' but got {type(right).__name__} for right argument."
+            )
+
+        kwargs = {}
+        for name in (f.name for f in fields(cls)):
+            left_value = getattr(left, name)
+            right_value = getattr(right, name)
+            if left_value is None:
+                kwargs[name] = right_value
+            elif right_value is None:
+                kwargs[name] = left_value
+            else:
+                kwargs[name] = max(left_value, right_value)
+        return cast(_TDataclass, cls(**kwargs))
+
+    return op

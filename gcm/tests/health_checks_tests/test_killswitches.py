@@ -57,7 +57,7 @@ def _write_to_file(path: Path, data: str) -> Path:
         "check-service service-status -s sth",
         "check-service package-version -p sth -v sth",
         "check-nccl --nccl-tdir=sth -p all_gather --critical-threshold=4",
-        "check-gpu-clock-policy --expected-graphics-freq=1155 --expected-memory-freq=1593",
+        "check-nvidia-smi -c clock_policy --expected-graphics-freq=1155 --expected-memory-freq=1593",
         "check-nvidia-smi -c gpu_num",
         "check-nvidia-smi -c running_procs",
         "check-nvidia-smi -c clock_freq",

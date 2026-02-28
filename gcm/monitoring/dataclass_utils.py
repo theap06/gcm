@@ -77,7 +77,7 @@ def asdict_recursive(obj: NonFlattened, key: str = "") -> FlattenedOrBaseType:
                 results.update(flat_result)
             else:
                 results[new_key] = flat_result
-    elif isinstance(obj, list) or isinstance(obj, tuple):
+    elif isinstance(obj, list):
         for i, value in enumerate(obj):
             if value is None:
                 continue

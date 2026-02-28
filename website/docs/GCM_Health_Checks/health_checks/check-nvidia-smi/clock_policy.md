@@ -1,4 +1,4 @@
-# check-gpu-clock-policy
+# clock_policy
 
 ## Overview
 
@@ -9,8 +9,9 @@ For each GPU, the check compares observed graphics and memory application clocks
 
 | Option | Type | Default | Description |
 |--------|------|---------|-------------|
-| `--expected-graphics-freq` | Integer | **Required** | Expected graphics application clock (MHz) |
-| `--expected-memory-freq` | Integer | **Required** | Expected memory application clock (MHz) |
+| `--check clock_policy` | Choice | Required | Enable the clock policy sub-check under `check-nvidia-smi` |
+| `--expected-graphics-freq` | Integer | 1155 | Expected graphics application clock (MHz) |
+| `--expected-memory-freq` | Integer | 1593 | Expected memory application clock (MHz) |
 | `--warn-delta-mhz` | Integer | 30 | Warn when absolute drift meets or exceeds this threshold |
 | `--critical-delta-mhz` | Integer | 75 | Critical when absolute drift meets or exceeds this threshold |
 | `--sink` | String | do_nothing | Telemetry sink destination |
@@ -45,7 +46,8 @@ disable_nvidia_smi_clock_policy = true
 ### Basic Policy Validation
 
 ```shell
-health_checks check-gpu-clock-policy \
+health_checks check-nvidia-smi \
+  --check clock_policy \
   --expected-graphics-freq 1155 \
   --expected-memory-freq 1593 \
   --warn-delta-mhz 30 \
@@ -58,7 +60,8 @@ health_checks check-gpu-clock-policy \
 ### With Telemetry Sink
 
 ```shell
-health_checks check-gpu-clock-policy \
+health_checks check-nvidia-smi \
+  --check clock_policy \
   --expected-graphics-freq 1155 \
   --expected-memory-freq 1593 \
   --warn-delta-mhz 30 \

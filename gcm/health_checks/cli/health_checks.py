@@ -38,7 +38,6 @@ list_of_checks: List[click.core.Command] = [
     checks.check_telemetry,
     checks.check_dcgmi,
     checks.check_hca,
-    checks.check_gpu_clock_policy,
     checks.check_nccl,
     checks.check_nvidia_smi,
     checks.check_syslogs,
