@@ -374,6 +374,7 @@ pynvml==11.4.1 \
     --hash=sha256:d27be542cd9d06558de18e2deffc8022ccd7355bc7382255d477038e7e424c6c
     # via gcm (pyproject.toml)
 pyoxidizer==0.24.0 \
+    --hash=sha256:1a9940d2bdb6c9e6c6c45eb4de3d4d6e5c9b3a3724dbc7d774d85d4956058447 \
     --hash=sha256:ec56f2b99495aa0178e927389a3e151e9669beae4e2bce3f6897fb9891b5502e
     # via gcm (pyproject.toml)
 pyproject-hooks==1.2.0 \
