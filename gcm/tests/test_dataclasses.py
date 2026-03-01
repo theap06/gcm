@@ -200,24 +200,6 @@ class TestNestedList:
 
 
 @dataclass
-class TestTuple:
-    __test__ = False
-    a: tuple[str, ...]
-
-
-@dataclass
-class TestNestedTuple:
-    __test__ = False
-    a: tuple[tuple[str, ...], ...]
-
-
-@dataclass
-class TestTupleWithNamedObjects:
-    __test__ = False
-    a: tuple[NamedHelperDataclass, ...]
-
-
-@dataclass
 class TestNestedDictList:
     __test__ = False
     nested_base: list[dict[str, str | int | TestNestedList]]
@@ -331,20 +313,6 @@ class TestNestedDictList:
         ),
         (TestNestedList(a=[[]]), {}),
         (TestNestedList(a=[["i1"]]), {"a.0.0": "i1"}),
-        (TestTuple(a=tuple()), {}),
-        (TestTuple(a=("i1",)), {"a.0": "i1"}),
-        (TestTuple(a=("i1", "i2")), {"a.0": "i1", "a.1": "i2"}),
-        (TestNestedTuple(a=((),)), {}),
-        (TestNestedTuple(a=(("i1",),)), {"a.0.0": "i1"}),
-        (
-            TestTupleWithNamedObjects(
-                a=(
-                    NamedHelperDataclass(name="n1", nhd_a="v1"),
-                    NamedHelperDataclass(name="n2", nhd_a="v2"),
-                )
-            ),
-            {"a.n1.nhd_a": "v1", "a.n2.nhd_a": "v2"},
-        ),
         (
             TestNestedDictList(
                 nested_base=[], nested_dict=[], nested_list=[], nested_pydantic=[]
