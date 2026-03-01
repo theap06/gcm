@@ -267,6 +267,7 @@ def publish_all_parallel(
     *,
     max_concurrency: Optional[int] = None,
 ) -> None:
+    global logger
     sem = threading.Semaphore(max_concurrency) if max_concurrency is not None else None
     work_queue: "Queue[Optional[BoundedClosedInterval]]" = Queue()
 

@@ -90,6 +90,9 @@ def asdict_recursive(obj: NonFlattened, key: str = "") -> FlattenedOrBaseType:
                 results.update(flat_result)
             else:
                 results[new_key] = flat_result
+    elif isinstance(obj, tuple):
+        # TODO: add support for tuples
+        raise TypeError("Tuples are not supported for asdict_recursive.")
     elif isinstance(obj, (str, int, float, bool)):
         return obj
     else:
