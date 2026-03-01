@@ -10,8 +10,8 @@ from gcm.schemas.gpu.application_clock import ApplicationClockInfo
 class ClockPolicy:
     expected_graphics_freq: int
     expected_memory_freq: int
-    warn_delta_mhz: int = 0
-    critical_delta_mhz: int = 0
+    warn_delta_mhz: int
+    critical_delta_mhz: int
 
     def __post_init__(self) -> None:
         if self.warn_delta_mhz < 0:
