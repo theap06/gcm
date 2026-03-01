@@ -573,6 +573,7 @@ def publish_chunk(
     """
     start_iso = interval.lower.isoformat(sep="T")
     end_iso = interval.upper.isoformat(sep="T")
+    global logger
     logger.info(f"Chunk {start_iso} {end_iso}")
 
     with subprocess.Popen(
@@ -643,6 +644,7 @@ Manager.register("get_barrier")
 def get_manager(
     host: Optional[IPAddress], port: Optional[int], authkey: Optional[str]
 ) -> Optional[Manager]:
+    global logger
     if host is None:
         logger.info("Host is None, not returning Manager")
         return None
