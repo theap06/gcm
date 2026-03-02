@@ -41,7 +41,7 @@ def test_evaluate_clock_policy_critical() -> None:
         critical_delta_mhz=75,
     )
 
-    result = evaluate_clock_policy(ApplicationClockInfo(1250, 1593), policy)
+    result = evaluate_clock_policy(ApplicationClockInfo(graphics_freq=1250, memory_freq=1593), policy)
 
     assert not result.compliant
     assert result.severity == ExitCode.CRITICAL
