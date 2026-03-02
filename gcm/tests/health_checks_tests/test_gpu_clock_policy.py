@@ -138,9 +138,9 @@ def test_check_gpu_clock_policy_uses_worst_case_across_gpus(
         "log_level",
         "log_folder",
         [
-            ApplicationClockInfo(1155, 1593),
-            ApplicationClockInfo(1200, 1593),
-            ApplicationClockInfo(1300, 1593),
+            ApplicationClockInfo(graphics_freq=1155, memory_freq=1593),
+            ApplicationClockInfo(graphics_freq=1200, memory_freq=1593),
+            ApplicationClockInfo(graphics_freq=1300, memory_freq=1593),
         ],
     )
 
