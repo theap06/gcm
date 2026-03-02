@@ -109,7 +109,7 @@ def test_check_gpu_clock_policy_command_critical(
         "type",
         "log_level",
         "log_folder",
-        [ApplicationClockInfo(1300, 1593)],
+        [ApplicationClockInfo(graphics_freq=1300, memory_freq=1593)],
     )
 
     result = runner.invoke(
