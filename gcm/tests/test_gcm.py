@@ -17,3 +17,14 @@ def test_cli(command: str) -> None:
     result = runner.invoke(main, [command, "--help"], catch_exceptions=False)
 
     assert result.stdout.strip() != ""
+
+
+def test_backend_option_is_accepted() -> None:
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        ["--backend", "nvml", "nvml_monitor", "--help"],
+        catch_exceptions=False,
+    )
+    assert result.exit_code == 0
+    assert "--sink" in result.stdout
