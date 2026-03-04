@@ -59,5 +59,36 @@ gcm/monitoring/accelerator/
 
 ## Test plan
 
-- `gcm --backend=nvml nvml_monitor --sink=stdout --help`
-- `health_checks --backend=nvml check-nvidia-smi fair_cluster nagios --sink=stdout --help`
+### Full-run commands (with output)
+
+**gcm** (single collection, stdout sink):
+
+```bash
+gcm --backend=nvml nvml_monitor --sink=stdout --once --log-folder=/tmp/gcm-log
+```
+
+Example output (with NVIDIA GPUs present):
+
+```json
+[{"gpu_id": 0, "hostname": "node01", "mem_util": 45, "gpu_util": 32, ...}]
+[{"gpu_index": 0, "max_gpu_util": 32, "min_gpu_util": 28, ...}]
+```
+
+Without GPUs: exits with `DeviceTelemetryException` / NVML not found.
+
+**health_checks** (nvidia-smi gpu_num check, stdout sink):
+
+```bash
+health_checks --backend=nvml check-nvidia-smi fair_cluster nagios --sink=stdout -c gpu_num --gpu_num=0
+```
+
+Example output:
+
+```json
+[{"node": "node01", "cluster": "fair_cluster", "health_check": "nvidia smi", "type": "nagios", "result": 0, "_msg": "Number of GPUs present is the same as expected, 0", ...}]
+```
+
+### Automated tests
+
+- `pytest -q gcm/tests/test_accelerator_hal.py`
+- `pytest -q gcm/tests/test_gcm.py -k "backend or full_run"`
